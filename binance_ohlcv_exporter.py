@@ -336,22 +336,32 @@ def main() -> None:
     total_jobs = len(symbols) * len(args.intervals)
     pbar = tqdm(total=total_jobs, desc="Exporting", unit="job")
 
+    failed: list[str] = []
+
     for symbol in symbols:
         log.info("Fetching %s …", symbol)
-        klines_by_interval: dict[str, List[Kline]] = {}
+        try:
+            klines_by_interval: dict[str, List[Kline]] = {}
 
-        for interval in args.intervals:
-            kl = fetch_klines(symbol, interval, start_ms, end_ms, args.timeout, args.sleep)
-            klines_by_interval[interval] = kl
+            for interval in args.intervals:
+                kl = fetch_klines(symbol, interval, start_ms, end_ms, args.timeout, args.sleep)
+                klines_by_interval[interval] = kl
 
-            out_csv = os.path.join(out_root, f"klines_{interval}", f"{symbol}_{interval}.csv")
-            write_klines_csv(out_csv, kl)
-            log.info("  saved: %s (%d rows)", out_csv, len(kl))
-            pbar.update(1)
+                out_csv = os.path.join(out_root, f"klines_{interval}", f"{symbol}_{interval}.csv")
+                write_klines_csv(out_csv, kl)
+                log.info("  saved: %s (%d rows)", out_csv, len(kl))
+                pbar.update(1)
 
-        if "1h" in klines_by_interval:
-            ch90, ch180, avg_b, avg_q = calc_metrics(symbol, klines_by_interval["1h"])
-            summary_rows.append([symbol, f"{ch90:.6f}", f"{ch180:.6f}", f"{avg_b:.10f}", f"{avg_q:.10f}"])
+            if "1h" in klines_by_interval:
+                ch90, ch180, avg_b, avg_q = calc_metrics(symbol, klines_by_interval["1h"])
+                summary_rows.append([symbol, f"{ch90:.6f}", f"{ch180:.6f}", f"{avg_b:.10f}", f"{avg_q:.10f}"])
+
+        except Exception as exc:  # noqa: BLE001
+            log.error("⚠ %s failed: %s — skipping", symbol, exc)
+            failed.append(symbol)
+            # Просунути progress bar за пропущені jobs
+            remaining = len(args.intervals) - sum(1 for _ in klines_by_interval)
+            pbar.update(remaining)
 
     pbar.close()
 
@@ -363,6 +373,8 @@ def main() -> None:
         w.writerows(summary_rows)
 
     log.info("Done. Summary → %s", summary_path)
+    if failed:
+        log.warning("Failed symbols (%d): %s", len(failed), ", ".join(failed))
 
 
 if __name__ == "__main__":
