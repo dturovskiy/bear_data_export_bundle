@@ -87,6 +87,8 @@ python binance_ohlcv_exporter.py \
 
 > You can combine `--symbols` and `--symbols-file`; duplicates are removed automatically.
 
+> **Tip:** For 10+ symbols consider `--sleep 0.3` (or higher) to reduce the chance of hitting Binance rate limits (HTTP 429).
+
 ## Output
 
 ```
