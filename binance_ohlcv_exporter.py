@@ -52,16 +52,16 @@ KLINES_PATH = "/api/v3/klines"
 @dataclass(frozen=True)
 class Kline:
     open_time_ms: int
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float
+    open: str
+    high: str
+    low: str
+    close: str
+    volume: str
     close_time_ms: int
-    quote_volume: float
+    quote_volume: str
     trades: int
-    taker_buy_base_volume: float
-    taker_buy_quote_volume: float
+    taker_buy_base_volume: str
+    taker_buy_quote_volume: str
 
 
 def ms_to_utc_iso(ms: int) -> str:
@@ -188,16 +188,16 @@ def fetch_klines(
             out.append(
                 Kline(
                     open_time_ms=int(row[0]),
-                    open=float(row[1]),
-                    high=float(row[2]),
-                    low=float(row[3]),
-                    close=float(row[4]),
-                    volume=float(row[5]),
+                    open=row[1],
+                    high=row[2],
+                    low=row[3],
+                    close=row[4],
+                    volume=row[5],
                     close_time_ms=int(row[6]),
-                    quote_volume=float(row[7]),
+                    quote_volume=row[7],
                     trades=int(row[8]),
-                    taker_buy_base_volume=float(row[9]),
-                    taker_buy_quote_volume=float(row[10]),
+                    taker_buy_base_volume=row[9],
+                    taker_buy_quote_volume=row[10],
                 )
             )
 
@@ -245,16 +245,16 @@ def write_klines_csv(path: str, klines: List[Kline]) -> None:
             w.writerow(
                 [
                     ms_to_utc_iso(k.open_time_ms),
-                    f"{k.open:.10f}",
-                    f"{k.high:.10f}",
-                    f"{k.low:.10f}",
-                    f"{k.close:.10f}",
-                    f"{k.volume:.10f}",
+                    k.open,
+                    k.high,
+                    k.low,
+                    k.close,
+                    k.volume,
                     ms_to_utc_iso(k.close_time_ms),
-                    f"{k.quote_volume:.10f}",
+                    k.quote_volume,
                     k.trades,
-                    f"{k.taker_buy_base_volume:.10f}",
-                    f"{k.taker_buy_quote_volume:.10f}",
+                    k.taker_buy_base_volume,
+                    k.taker_buy_quote_volume,
                 ]
             )
 
@@ -274,11 +274,11 @@ def calc_metrics(symbol: str, klines_1h: List[Kline]) -> Tuple[float, float, flo
     def close_at_or_after(target_ms: int) -> float:
         for k in klines_1h:
             if k.open_time_ms >= target_ms:
-                return k.close
-        return klines_1h[-1].close
+                return float(k.close)
+        return float(klines_1h[-1].close)
 
     end_ms = klines_1h[-1].open_time_ms
-    c_end = klines_1h[-1].close
+    c_end = float(klines_1h[-1].close)
 
     ms_90 = end_ms - int(90 * 24 * 3600 * 1000)
     ms_180 = end_ms - int(180 * 24 * 3600 * 1000)
@@ -294,8 +294,8 @@ def calc_metrics(symbol: str, klines_1h: List[Kline]) -> Tuple[float, float, flo
     day_q: dict[str, float] = {}
     for k in klines_1h:
         day = ms_to_utc_iso(k.open_time_ms)[:10]
-        day_b[day] = day_b.get(day, 0.0) + k.volume
-        day_q[day] = day_q.get(day, 0.0) + k.quote_volume
+        day_b[day] = day_b.get(day, 0.0) + float(k.volume)
+        day_q[day] = day_q.get(day, 0.0) + float(k.quote_volume)
 
     avg_b = sum(day_b.values()) / len(day_b) if day_b else float("nan")
     avg_q = sum(day_q.values()) / len(day_q) if day_q else float("nan")
@@ -342,6 +342,7 @@ def main() -> None:
         log.info("Fetching %s …", symbol)
         try:
             klines_by_interval: dict[str, List[Kline]] = {}
+            done_intervals = 0
 
             for interval in args.intervals:
                 kl = fetch_klines(symbol, interval, start_ms, end_ms, args.timeout, args.sleep)
@@ -351,6 +352,7 @@ def main() -> None:
                 write_klines_csv(out_csv, kl)
                 log.info("  saved: %s (%d rows)", out_csv, len(kl))
                 pbar.update(1)
+                done_intervals += 1
 
             if "1h" in klines_by_interval:
                 ch90, ch180, avg_b, avg_q = calc_metrics(symbol, klines_by_interval["1h"])
@@ -359,9 +361,7 @@ def main() -> None:
         except Exception as exc:  # noqa: BLE001
             log.error("⚠ %s failed: %s — skipping", symbol, exc)
             failed.append(symbol)
-            # Просунути progress bar за пропущені jobs
-            remaining = len(args.intervals) - sum(1 for _ in klines_by_interval)
-            pbar.update(remaining)
+            pbar.update(len(args.intervals) - done_intervals)
 
     pbar.close()
 
