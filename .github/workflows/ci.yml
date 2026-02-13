@@ -34,3 +34,6 @@ jobs:
 
       - name: Version check
         run: python binance_ohlcv_exporter.py --version
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
