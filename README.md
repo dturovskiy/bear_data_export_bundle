@@ -1,3 +1,9 @@
+[![CI](https://github.com/dturovskiy/bear_data_export_bundle/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dturovskiy/bear_data_export_bundle/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/dturovskiy/bear_data_export_bundle)](https://github.com/dturovskiy/bear_data_export_bundle/releases/latest)
+[![License](https://img.shields.io/github/license/dturovskiy/bear_data_export_bundle)](https://github.com/dturovskiy/bear_data_export_bundle/blob/main/LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/dturovskiy/bear_data_export_bundle/total)](https://github.com/dturovskiy/bear_data_export_bundle/releases)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
+
 # Binance OHLCV CSV Exporter (Spot)
 
 A lightweight Python CLI tool that exports historical OHLCV (Open, High, Low, Close, Volume) candlestick data from the **Binance Spot** market into CSV files. Uses the public [Binance Market Data](https://data-api.binance.vision) endpoint — **no API key required**.
