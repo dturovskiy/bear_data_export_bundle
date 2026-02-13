@@ -4,10 +4,6 @@
 
 **Please do NOT open a public GitHub Issue for security vulnerabilities.**
 
-If you discover a security issue in this project, please report it **privately** by emailing:
-
-📧 **your-email@example.com**
-
 ### What to include
 
 - Description of the vulnerability
