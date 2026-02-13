@@ -27,7 +27,7 @@ symbol,price_change_90d_pct,price_change_180d_pct,avg_daily_volume_base,avg_dail
 
 from __future__ import annotations
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 import argparse
 import csv
