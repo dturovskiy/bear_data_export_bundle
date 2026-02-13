@@ -1,4 +1,4 @@
-name: 🐛 Bug Report
+name: Bug Report
 description: Report a bug or unexpected behavior
 labels: ["bug"]
 body:
@@ -57,7 +57,7 @@ body:
     attributes:
       label: Relevant CSV data (optional)
       description: >
-        If applicable, paste 1–2 rows from `summary_metrics.csv` or mention the
+        If applicable, paste 1-2 rows from `summary_metrics.csv` or mention the
         symbol/interval where the issue occurred.
 
   - type: input

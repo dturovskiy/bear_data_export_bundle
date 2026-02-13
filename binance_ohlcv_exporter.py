@@ -25,6 +25,8 @@ open_time_utc,open,high,low,close,volume,close_time_utc,quote_volume,trades,take
 symbol,price_change_90d_pct,price_change_180d_pct,avg_daily_volume_base,avg_daily_volume_quote
 """
 
+from __future__ import annotations
+
 __version__ = "1.1.0"
 
 import argparse
