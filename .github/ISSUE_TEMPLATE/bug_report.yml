@@ -1,0 +1,89 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command used
+      description: >
+        The exact command you ran (with `--symbols-file`, `--intervals`, `--days`,
+        `--sleep`, etc.).
+      placeholder: |
+        python binance_ohlcv_exporter.py \
+          --symbols-file symbols_spot_13.txt \
+          --intervals 1h 4h \
+          --days 180 \
+          --sleep 0.3
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output / error traceback
+      description: Paste the relevant log output or Python traceback.
+      render: text
+
+  - type: textarea
+    id: csv-snippet
+    attributes:
+      label: Relevant CSV data (optional)
+      description: >
+        If applicable, paste 1–2 rows from `summary_metrics.csv` or mention the
+        symbol/interval where the issue occurred.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit hash
+      description: "Output of `python binance_ohlcv_exporter.py --version` or the commit hash."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Linux
+        - macOS
+        - Windows
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      description: "Output of `python --version`."
+      placeholder: "3.12.0"
+    validations:
+      required: true
