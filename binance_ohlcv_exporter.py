@@ -69,18 +69,31 @@ def ms_to_utc_iso(ms: int) -> str:
     return dt.datetime.fromtimestamp(ms / 1000, tz=dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _load_symbols_file(path: str) -> list[str]:
+    """Читає символи з текстового файлу (один символ на рядок, ігнорує порожні / коментарі)."""
+    symbols: list[str] = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                symbols.append(line.upper())
+    return symbols
+
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Export Binance spot OHLCV data to CSV.",
     )
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    p.add_argument("--symbols", nargs="+", required=True, help="Список символів, напр. BTCUSDT BNBUSDT ...")
+    p.add_argument("--symbols", nargs="+", default=[], help="Список символів, напр. BTCUSDT BNBUSDT ...")
+    p.add_argument("--symbols-file", type=str, default=None, help="Файл зі списком символів (один на рядок).")
     p.add_argument("--intervals", nargs="+", default=["1h", "4h"], help="Інтервали, напр. 1h 4h")
     p.add_argument("--days", type=int, default=180, help="Вікно в днях (якщо не задані --start/--end).")
     p.add_argument("--start", type=str, default=None, help="Початок UTC: YYYY-MM-DD або YYYY-MM-DDTHH:MM:SS")
     p.add_argument("--end", type=str, default=None, help="Кінець UTC: YYYY-MM-DD або YYYY-MM-DDTHH:MM:SS")
     p.add_argument("--out", type=str, default="out", help="Папка для CSV.")
     p.add_argument("--timeout", type=int, default=20, help="Таймаут HTTP (сек).")
+    p.add_argument("--sleep", type=float, default=0.15, help="Пауза між сторінками запитів (сек, за замовчуванням 0.15).")
     return p.parse_args()
 
 
@@ -140,7 +153,14 @@ def _request_with_retry(
     return []  # unreachable, kept for type-checker
 
 
-def fetch_klines(symbol: str, interval: str, start_ms: int, end_ms: int, timeout: int) -> List[Kline]:
+def fetch_klines(
+    symbol: str,
+    interval: str,
+    start_ms: int,
+    end_ms: int,
+    timeout: int,
+    sleep_sec: float = 0.15,
+) -> List[Kline]:
     """
     Завантажує klines через /api/v3/klines з пагінацією (limit=1000).
     Повертає список Kline, відсортований за часом зростання.
@@ -189,8 +209,8 @@ def fetch_klines(symbol: str, interval: str, start_ms: int, end_ms: int, timeout
         # Наступна сторінка: +1 ms, щоб уникнути дубля
         next_start = last_open + 1
 
-        # Rate-limit: невелика пауза між сторінками
-        time.sleep(0.15)
+        # Rate-limit: керована пауза між сторінками
+        time.sleep(sleep_sec)
 
     # У Binance інколи можуть бути дублікати на стиках; зачистимо:
     dedup: dict[int, Kline] = {}
@@ -290,6 +310,17 @@ def main() -> None:
     )
 
     args = parse_args()
+
+    # Збираємо символи: CLI + файл
+    symbols: list[str] = list(args.symbols)
+    if args.symbols_file:
+        symbols.extend(_load_symbols_file(args.symbols_file))
+    # Видаляємо дублікати, зберігаючи порядок
+    symbols = list(dict.fromkeys(symbols))
+    if not symbols:
+        log.error("No symbols specified. Use --symbols and/or --symbols-file.")
+        raise SystemExit(1)
+
     start_ms, end_ms = get_range(args.days, args.start, args.end)
 
     out_root = args.out
@@ -302,15 +333,15 @@ def main() -> None:
     # Метрики будемо рахувати з 1h (щоб добові обсяги були точнішими)
     summary_rows: list[list[str]] = []
 
-    total_jobs = len(args.symbols) * len(args.intervals)
+    total_jobs = len(symbols) * len(args.intervals)
     pbar = tqdm(total=total_jobs, desc="Exporting", unit="job")
 
-    for symbol in args.symbols:
+    for symbol in symbols:
         log.info("Fetching %s …", symbol)
         klines_by_interval: dict[str, List[Kline]] = {}
 
         for interval in args.intervals:
-            kl = fetch_klines(symbol, interval, start_ms, end_ms, args.timeout)
+            kl = fetch_klines(symbol, interval, start_ms, end_ms, args.timeout, args.sleep)
             klines_by_interval[interval] = kl
 
             out_csv = os.path.join(out_root, f"klines_{interval}", f"{symbol}_{interval}.csv")
